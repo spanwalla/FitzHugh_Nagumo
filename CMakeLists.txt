@@ -3,4 +3,4 @@ project(FitzHugh_Nagumo)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(FitzHugh_Nagumo main.cpp)
+add_executable(FitzHugh_Nagumo src/main.cpp)
