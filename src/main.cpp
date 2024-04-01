@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <unordered_map>
+#include <algorithm>
 
 /* TODO:
  * Вложенные методы Рунге-Кутты
@@ -36,20 +37,26 @@ double recovery(double v, const std::unordered_map<char, double>& params) {
     return (params.at('u') + params.at('a') - params.at('b') * v) / params.at('T');
 }
 
-double rungeKutta(double(*function)(double, const std::unordered_map<char, double>&), double value,
-                  const std::unordered_map<char, double>& params, const std::vector<std::vector<double>>& tableau) {
+std::vector<double> rungeKutta(double(*function)(double, const std::unordered_map<char, double>&),
+                               double value, const std::unordered_map<char, double>& params,
+                               const std::vector<std::vector<double>>& tableau) {
     std::vector<double> k(tableau.back().size());
-    double weighted_sum = 0;
+    std::vector<double> weighted_sum(tableau.size() - tableau.back().size(), 0);
+
     for (int i = 0; i < tableau.back().size(); ++i) {
         double sum = 0;
-        // для использования неявных методов можно будет заменить j < i на j < tableau.back().size()
         for (int j = 0; j < i; ++j) {
             sum += tableau[i][j] * k[j];
         }
         k[i] = function(value + params.at('h') * sum, params);
-        weighted_sum += tableau.back()[i] * k[i];
+
+        for (int j = 0; j < weighted_sum.size(); ++j) {
+            weighted_sum[j] += tableau[tableau.back().size() + j][i] * k[i];
+        }
     }
-    return value + params.at('h') * weighted_sum;
+    std::vector<double> answer(weighted_sum.size());
+    std::transform(weighted_sum.cbegin(), weighted_sum.cend(), answer.begin(), [&](double weight) -> double { return value + params.at('h') * weight; });
+    return answer;
 }
 
 std::vector<std::vector<double>> readButcherTableauFromFile(const std::string& filename) {
@@ -75,8 +82,30 @@ std::vector<std::vector<double>> readButcherTableauFromFile(const std::string& f
     return tableau;
 }
 
-std::vector<std::tuple<double, double, double>> fitzHughNagumoModel(double duration) {
+std::vector<std::vector<double>> fitzHughNagumoModel(double duration, double accuracy = 0.001) {
     return {};
+}
+
+template <class T>
+void write2DVectorToFile(const std::string& filename, const std::vector<std::vector<T>>& sequence,
+                      const std::string& head, const std::string& delimiter = ",") {
+    std::ofstream file(filename);
+    if (!file.is_open())
+        throw std::runtime_error("Unable to open file for write.");
+
+    file << head << '\n';
+    for (size_t i = 0; const auto& row : sequence) {
+        if (i++ != 0)
+            file << '\n';
+
+        for (size_t j = 0; const auto& element : row) {
+            if (j++ != 0)
+                file << delimiter;
+            file << element;
+        }
+    }
+
+    file.close();
 }
 
 std::unordered_map<std::string, std::string> getAvailableMethods() {
@@ -100,13 +129,16 @@ int main() {
     auto tableau = readButcherTableauFromFile(available_methods["rk4"]);
     std::unordered_map<char, double> state = {{'a', 0.7}, {'b', 0.8}, {'I', 0.5}, {'T', 12.5},
                                               {'u', 0}, {'v', 0}, {'h', 0.1}};
-    std::cout << "t,u\n";
+    std::vector<std::vector<double>> points;
     double t = 0;
-    while (t <= 3) {
-        std::cout << t << ',' << 100 * state.at('u') << '\n';
+    // std::cout << "t,u\n";
+    while (t <= 150) {
+        // std::cout << t << ',' << 100 * state.at('u') << '\n';
+        points.push_back({t, state.at('u'), state.at('v')});
         t += state.at('h');
-        state['u'] = rungeKutta(voltage, state.at('u'), state, tableau);
-        state['v'] = rungeKutta(recovery, state.at('v'), state, tableau);
+        state['u'] = rungeKutta(voltage, state.at('u'), state, tableau)[0];
+        state['v'] = rungeKutta(recovery, state.at('v'), state, tableau)[0];
     }
+    write2DVectorToFile("../data/result/3.txt", points, "t,u,v");
     return 0;
 }
