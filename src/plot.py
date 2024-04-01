@@ -55,7 +55,7 @@ def plot_data(filename):
     u_animated = fig_animated.add_subplot(211)
     u_animated.set_xlim(t_limits)
     u_animated.set_ylim(u_limits)
-    v_animated = fig_animated.add_subplot(211)
+    v_animated = fig_animated.add_subplot(212)
     v_animated.set_xlim(t_limits)
     v_animated.set_ylim(v_limits)
 
