@@ -3,3 +3,4 @@ bs:data/tableau/bogacki-shampine.txt
 he:data/tableau/heun-euler.txt
 ralston:data/tableau/ralston.txt
 rk4:data/tableau/rk4.txt
+dp8:data/tableau/dp8.txt

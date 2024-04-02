@@ -32,38 +32,6 @@ std::vector<std::string> split(const std::string& source, char delimiter) {
     return result;
 }
 
-// du/dt = u - (u^3)/3 - v + I
-double voltage(double u, const std::unordered_map<char, double>& params) {
-    return u - pow(u, 3) / 3 - params.at('v') + params.at('I');
-}
-
-// T*(dv/dt) = u + a - bv
-double recovery(double v, const std::unordered_map<char, double>& params) {
-    return (params.at('u') + params.at('a') - params.at('b') * v) / params.at('T');
-}
-
-std::vector<double> rungeKutta(double(*function)(double, const std::unordered_map<char, double>&),
-                               double value, const std::unordered_map<char, double>& params,
-                               const std::vector<std::vector<double>>& tableau) {
-    std::vector<double> k(tableau.back().size());
-    std::vector<double> weighted_sum(tableau.size() - tableau.back().size(), 0);
-
-    for (int i = 0; i < tableau.back().size(); ++i) {
-        double sum = 0;
-        for (int j = 0; j < i; ++j) {
-            sum += tableau[i][j] * k[j];
-        }
-        k[i] = function(value + params.at('h') * sum, params);
-
-        for (int j = 0; j < weighted_sum.size(); ++j) {
-            weighted_sum[j] += tableau[tableau.back().size() + j][i] * k[i];
-        }
-    }
-    std::vector<double> answer(weighted_sum.size());
-    std::transform(weighted_sum.cbegin(), weighted_sum.cend(), answer.begin(), [&](double weight) -> double { return value + params.at('h') * weight; });
-    return answer;
-}
-
 std::vector<std::vector<double>> readButcherTableauFromFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open())
@@ -145,6 +113,38 @@ std::unordered_map<char, double> readStateFromFile(const std::string& filename) 
     return state;
 }
 
+// du/dt = u - (u^3)/3 - v + I
+double voltage(double u, const std::unordered_map<char, double>& params) {
+    return u - pow(u, 3) / 3 - params.at('v') + params.at('I');
+}
+
+// T*(dv/dt) = u + a - bv
+double recovery(double v, const std::unordered_map<char, double>& params) {
+    return (params.at('u') + params.at('a') - params.at('b') * v) / params.at('T');
+}
+
+std::vector<double> rungeKutta(double(*function)(double, const std::unordered_map<char, double>&),
+                               double value, const std::unordered_map<char, double>& params,
+                               const std::vector<std::vector<double>>& tableau) {
+    std::vector<double> k(tableau.back().size());
+    std::vector<double> weighted_sum(tableau.size() - tableau.back().size(), 0);
+
+    for (int i = 0; i < tableau.back().size(); ++i) {
+        double sum = 0;
+        for (int j = 0; j < i; ++j) {
+            sum += tableau[i][j] * k[j];
+        }
+        k[i] = function(value + params.at('h') * sum, params);
+
+        for (int j = 0; j < weighted_sum.size(); ++j) {
+            weighted_sum[j] += tableau[tableau.back().size() + j][i] * k[i];
+        }
+    }
+    std::vector<double> answer(weighted_sum.size());
+    std::transform(weighted_sum.cbegin(), weighted_sum.cend(), answer.begin(), [&](double weight) -> double { return value + params.at('h') * weight; });
+    return answer;
+}
+
 std::vector<std::vector<double>> fitzHughNagumoModel(double duration, const std::string& method,
                                                      std::unordered_map<char, double> state, double accuracy = 0.001) {
     if (duration <= 0)
@@ -166,7 +166,7 @@ std::vector<std::vector<double>> fitzHughNagumoModel(double duration, const std:
 
 int main(int argc, char** argv) {
     auto state = readStateFromFile("data/input/a.txt");
-    auto points = fitzHughNagumoModel(160, "rk4", state);
-    write2DVectorToFile("data/result/3.txt", points, "t,u,v");
+    auto points = fitzHughNagumoModel(160, "dp8", state);
+    write2DVectorToFile("data/result/dp.txt", points, "t,u,v");
     return 0;
 }
