@@ -18,7 +18,7 @@ def plot_data(filename):
     time, u, v = read_data(filename)
 
     # Plot 2D graphs for u(t), v(t)
-    plt.figure(figsize=(15, 15))
+    plt.figure(figsize=(10, 5))
     plt.subplots_adjust(hspace=0.5, wspace=0.5)
 
     ax_u = plt.subplot(2, 1, 1)
@@ -39,7 +39,7 @@ def plot_data(filename):
     u_limits = ax_u.get_ylim()
     v_limits = ax_v.get_ylim()
 
-    fig2d = plt.figure(figsize=(15, 10))
+    fig2d = plt.figure(figsize=(10, 5))
     ax2d = fig2d.add_subplot(111)
     ax2d.plot(time, u, label='u(t)', color='r')
     ax2d.plot(time, v, label='v(t)', color='g')
@@ -49,7 +49,7 @@ def plot_data(filename):
     ax2d.legend()
 
     # Animated graph
-    fig_animated = plt.figure(figsize=(15, 15))
+    fig_animated = plt.figure(figsize=(10, 5))
     plt.subplots_adjust(hspace=0.5, wspace=0.5)
 
     u_animated = fig_animated.add_subplot(211)
@@ -87,7 +87,7 @@ def plot_data(filename):
         return line_u, current_point_u, line_v, current_point_v,
 
     ani = FuncAnimation(fig_animated, update, frames=len(time), interval=1, blit=True)
-    ani.save('animation.gif', writer=PillowWriter(fps=15))
+    # ani.save('animation.gif', writer=PillowWriter(fps=15))
 
     # Show plots
     plt.show()

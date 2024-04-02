@@ -6,15 +6,20 @@
 #include <cmath>
 #include <unordered_map>
 #include <algorithm>
+#include <filesystem>
 
 /* TODO:
- * Вложенные методы Рунге-Кутты
  * Подбор шага
  * Разбить на файлы
- * Ввод/вывод из файлов
- * Построение графиков в Python
  * Реализовать FSAL так чтобы они make sense
  */
+
+std::string findFileInDirectory(const std::string& filename) {
+    for (std::filesystem::recursive_directory_iterator i("data"), end; i != end; ++i)
+        if (!is_directory(i->path()) && i->path().filename() == filename)
+            return i->path().string();
+    return "";
+}
 
 std::vector<std::string> split(const std::string& source, char delimiter) {
     std::vector<std::string> result;
@@ -82,10 +87,6 @@ std::vector<std::vector<double>> readButcherTableauFromFile(const std::string& f
     return tableau;
 }
 
-std::vector<std::vector<double>> fitzHughNagumoModel(double duration, double accuracy = 0.001) {
-    return {};
-}
-
 template <class T>
 void write2DVectorToFile(const std::string& filename, const std::vector<std::vector<T>>& sequence,
                       const std::string& head, const std::string& delimiter = ",") {
@@ -109,7 +110,11 @@ void write2DVectorToFile(const std::string& filename, const std::vector<std::vec
 }
 
 std::unordered_map<std::string, std::string> getAvailableMethods() {
-    std::ifstream file("../data/methods.txt");
+    std::string methods_path = findFileInDirectory("methods.txt");
+    if (methods_path.empty())
+        throw std::runtime_error("File 'methods.txt' not found in data folder.");
+
+    std::ifstream file(methods_path);
     if (!file.is_open())
         throw std::runtime_error("Unable to open file 'methods.txt'.");
 
@@ -124,21 +129,44 @@ std::unordered_map<std::string, std::string> getAvailableMethods() {
     return methods;
 }
 
-int main() {
+std::unordered_map<char, double> readStateFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open())
+        throw std::runtime_error("Unable to open file for read.");
+
+    std::unordered_map<char, double> state;
+    std::string row;
+    char key;
+    while (getline(file, row)) {
+        std::stringstream ss(row);
+        ss >> key >> state[key];
+    }
+    file.close();
+    return state;
+}
+
+std::vector<std::vector<double>> fitzHughNagumoModel(double duration, const std::string& method,
+                                                     std::unordered_map<char, double> state, double accuracy = 0.001) {
+    if (duration <= 0)
+        throw std::invalid_argument("Duration must be more than zero.");
+
     auto available_methods = getAvailableMethods();
-    auto tableau = readButcherTableauFromFile(available_methods["rk4"]);
-    std::unordered_map<char, double> state = {{'a', 0.7}, {'b', 0.8}, {'I', 0.5}, {'T', 12.5},
-                                              {'u', 0}, {'v', 0}, {'h', 0.1}};
+    auto tableau = readButcherTableauFromFile(available_methods[method]);
+
     std::vector<std::vector<double>> points;
     double t = 0;
-    // std::cout << "t,u\n";
-    while (t <= 150) {
-        // std::cout << t << ',' << 100 * state.at('u') << '\n';
+    while (t <= duration) {
         points.push_back({t, state.at('u'), state.at('v')});
         t += state.at('h');
         state['u'] = rungeKutta(voltage, state.at('u'), state, tableau)[0];
         state['v'] = rungeKutta(recovery, state.at('v'), state, tableau)[0];
     }
-    write2DVectorToFile("../data/result/3.txt", points, "t,u,v");
+    return points;
+}
+
+int main(int argc, char** argv) {
+    auto state = readStateFromFile("data/input/a.txt");
+    auto points = fitzHughNagumoModel(160, "rk4", state);
+    write2DVectorToFile("data/result/3.txt", points, "t,u,v");
     return 0;
 }
