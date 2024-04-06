@@ -9,7 +9,6 @@
 #include <filesystem>
 
 /* TODO:
- * Подбор шага
  * Разбить на файлы
  */
 
